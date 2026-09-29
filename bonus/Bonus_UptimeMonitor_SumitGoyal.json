@@ -1,0 +1,244 @@
+{
+  "name": "Bonus - Uptime Monitor",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "m0",
+      "name": "Manual Test",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "b1",
+      "name": "Every 5 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// CONFIG - change to the app you tested in Task 1\nconst TARGET = 'http://host.docker.internal:4100/';\nconst SLOW_MS = 3000;\nconst MAX_TRIES = 3;\n\nlet status = 0, ms = 0, error = null, attempt = 0;\nfor (attempt = 1; attempt <= MAX_TRIES; attempt++) {\n  const start = Date.now();\n  try {\n    const res = await this.helpers.httpRequest({\n      method: 'GET', url: TARGET, timeout: 10000,\n      returnFullResponse: true, ignoreHttpStatusErrors: true\n    });\n    status = res.statusCode; ms = Date.now() - start; error = null;\n    if (status === 200) break;\n  } catch (e) {\n    ms = Date.now() - start; status = 0; error = e.message;\n  }\n  if (attempt < MAX_TRIES) await new Promise(r => setTimeout(r, 5000));\n}\n\n// Keep a rolling log for the daily summary (persists for active workflows)\nconst store = $getWorkflowStaticData('global');\nstore.log = (store.log || []).concat({ t: Date.now(), status, ms }).slice(-400);\n\nconst up = status === 200;\nreturn [{ json: { target: TARGET, up, status, ms, slow: up && ms > SLOW_MS, attempts: Math.min(attempt, MAX_TRIES), error, checkedAt: new Date().toISOString() } }];"
+      },
+      "id": "b2",
+      "name": "Check App (with retries)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "u1",
+              "leftValue": "={{ $json.up }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "u2",
+              "leftValue": "={{ $json.slow }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "b3",
+      "name": "Down or Slow?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "={{ ($json.up ? '🐢 **App SLOW**' : '🔴 **App DOWN**') + '\\nURL: ' + $json.target + '\\nStatus: ' + $json.status + '\\nResponse time: ' + $json.ms + ' ms\\nAttempts: ' + $json.attempts + ($json.error ? '\\nError: ' + $json.error : '') + '\\nChecked: ' + $json.checkedAt }}",
+        "options": {}
+      },
+      "id": "b4",
+      "name": "Discord - Alert",
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        720,
+        -80
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "DiscordWebhook01",
+          "name": "Discord Webhook"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "id": "b5",
+      "name": "Daily 9am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const store = $getWorkflowStaticData('global');\nconst since = Date.now() - 24 * 3600 * 1000;\nconst log = (store.log || []).filter(x => x.t >= since);\nif (log.length === 0) return [{ json: { content: '📊 Uptime summary: no checks recorded in last 24h (is the monitor active?)' } }];\nconst ups = log.filter(x => x.status === 200);\nconst avg = ups.length ? Math.round(ups.reduce((s, x) => s + x.ms, 0) / ups.length) : 0;\nconst max = Math.max(...log.map(x => x.ms));\nconst pct = ((ups.length / log.length) * 100).toFixed(2);\nreturn [{ json: { content: `📊 **Daily uptime summary (24h)**\\nChecks: ${log.length}\\nUptime: ${pct}%\\nFailures: ${log.length - ups.length}\\nAvg response: ${avg} ms\\nSlowest: ${max} ms` } }];"
+      },
+      "id": "b6",
+      "name": "Build Daily Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "={{ $json.content }}",
+        "options": {}
+      },
+      "id": "b7",
+      "name": "Discord - Daily Summary",
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        480,
+        240
+      ],
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "DiscordWebhook01",
+          "name": "Discord Webhook"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 5 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Check App (with retries)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check App (with retries)": {
+      "main": [
+        [
+          {
+            "node": "Down or Slow?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Down or Slow?": {
+      "main": [
+        [
+          {
+            "node": "Discord - Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Daily 9am": {
+      "main": [
+        [
+          {
+            "node": "Build Daily Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Daily Summary": {
+      "main": [
+        [
+          {
+            "node": "Discord - Daily Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Test": {
+      "main": [
+        [
+          {
+            "node": "Check App (with retries)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "id": "BonusUptimeMon01",
+  "active": false
+}

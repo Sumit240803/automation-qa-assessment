@@ -1,0 +1,212 @@
+[
+  {
+    "id": "S1",
+    "title": "Happy-path sign up",
+    "status": "PASS",
+    "detail": "url=http://localhost:4100/"
+  },
+  {
+    "id": "S2",
+    "title": "Weak password (1 char) accepted",
+    "status": "BUG",
+    "detail": "HTTP 201"
+  },
+  {
+    "id": "S3",
+    "title": "Invalid email format accepted",
+    "status": "BUG",
+    "detail": "HTTP 201 {\"user\":{\"id\":15,\"email\":\"notanemail314772\",\"username\":\"bad_314772\",\"bio\":null,\"image\":\"https://api.realworld.io/images/smiley-cyrus.jpeg\",\"token\":\"ey"
+  },
+  {
+    "id": "S4",
+    "title": "Duplicate email shows clear error",
+    "status": "INFO",
+    "detail": "shown: \"email has already been taken\""
+  },
+  {
+    "id": "S5",
+    "title": "Empty sign-up form validation",
+    "status": "INFO",
+    "detail": "shown: \"email can't be blank\""
+  },
+  {
+    "id": "S6",
+    "title": "Whitespace-only username / 5000-char username",
+    "status": "BUG",
+    "detail": "whitespace HTTP 422, long HTTP 201"
+  },
+  {
+    "id": "L1",
+    "title": "JWT readable from localStorage",
+    "status": "BUG",
+    "detail": "keys=jwt"
+  },
+  {
+    "id": "L2",
+    "title": "Wrong password shows message",
+    "status": "INFO",
+    "detail": "shown: \"email or password is invalid\""
+  },
+  {
+    "id": "L3",
+    "title": "No rate limiting on login (20 bad attempts)",
+    "status": "BUG",
+    "detail": "codes=403"
+  },
+  {
+    "id": "L4",
+    "title": "JWT lifetime",
+    "status": "INFO",
+    "detail": "payload={\"user\":{\"id\":13},\"iat\":1790684321,\"exp\":1795868321} expiresIn(days)=60.0"
+  },
+  {
+    "id": "A1",
+    "title": "Create article",
+    "status": "PASS",
+    "detail": "url=http://localhost:4100/article/QA-article-314772-13"
+  },
+  {
+    "id": "A2",
+    "title": "Stored XSS via article markdown",
+    "status": "PASS",
+    "detail": "HTTP 201 scriptRan=false dialogs=[]"
+  },
+  {
+    "id": "A3",
+    "title": "10,000-char title accepted",
+    "status": "BUG",
+    "detail": "HTTP 201, slug length=10009, horizontal overflow=true"
+  },
+  {
+    "id": "A4",
+    "title": "Empty article validation",
+    "status": "INFO",
+    "detail": "API HTTP 422 {\"errors\":{\"title\":[\"can't be blank\"]}} | UI: \"\""
+  },
+  {
+    "id": "A5",
+    "title": "Special chars title/slug",
+    "status": "INFO",
+    "detail": "HTTP 201 slug=\"Unicode-'-\"-lessbgreaterxlessbgreater-314772-13\" rendered h1=\"Ünïcødé 🚀 ' \" <b>x</b> 314772\""
+  },
+  {
+    "id": "A6",
+    "title": "Two articles with same title",
+    "status": "INFO",
+    "detail": "1st HTTP 201, 2nd HTTP 422 {\"errors\":{\"title\":[\"must be unique\"]}}"
+  },
+  {
+    "id": "A7",
+    "title": "Double submit on slow network",
+    "status": "INFO",
+    "detail": "button disabled after 1st click=true, articles created=1"
+  },
+  {
+    "id": "E1",
+    "title": "Edit own article (title change)",
+    "status": "INFO",
+    "detail": "new url=http://localhost:4100/article/QA-article-EDITED-314772-13; old slug GET -> HTTP 404"
+  },
+  {
+    "id": "E2",
+    "title": "Other user can PUT/DELETE my article",
+    "status": "PASS",
+    "detail": "PUT HTTP 403, DELETE HTTP 403"
+  },
+  {
+    "id": "E2b",
+    "title": "Other user can open editor for my article (UI)",
+    "status": "BUG",
+    "detail": "title field prefilled=\"QA article EDITED 314772\""
+  },
+  {
+    "id": "C1",
+    "title": "Empty comment accepted",
+    "status": "PASS",
+    "detail": "HTTP 422"
+  },
+  {
+    "id": "D1",
+    "title": "Delete without confirmation",
+    "status": "BUG",
+    "detail": "confirm dialogs=0, article GET after delete=HTTP 404, landed on http://localhost:4100/"
+  },
+  {
+    "id": "D1b",
+    "title": "Back button after delete",
+    "status": "INFO",
+    "detail": "page shows: \"conduit Home  New Post  Settings qa1_314772\""
+  },
+  {
+    "id": "D2",
+    "title": "DELETE non-existent slug",
+    "status": "INFO",
+    "detail": "HTTP 404 {}"
+  },
+  {
+    "id": "D3",
+    "title": "Unknown article URL",
+    "status": "INFO",
+    "detail": "page shows: \"conduit Home  New Post  Settings qa1_314772\""
+  },
+  {
+    "id": "O1",
+    "title": "Old JWT still works after logout",
+    "status": "BUG",
+    "detail": "GET /user with old token -> HTTP 200"
+  },
+  {
+    "id": "O2",
+    "title": "Editor reachable when logged out",
+    "status": "BUG",
+    "detail": "form visible=true url=http://localhost:4100/editor"
+  },
+  {
+    "id": "M1",
+    "title": "Malformed JSON body",
+    "status": "BUG",
+    "detail": "HTTP 500 \"Expected property name or '}' in JSON at position 1 (line 1 column 2)\""
+  },
+  {
+    "id": "M2",
+    "title": "Invalid JWT",
+    "status": "INFO",
+    "detail": "HTTP 401 {\"status\":\"error\",\"message\":\"missing authorization credentials\"}"
+  },
+  {
+    "id": "M3",
+    "title": "limit=100000&offset=-5",
+    "status": "BUG",
+    "detail": "HTTP 500 ms=93 count=undefined"
+  },
+  {
+    "id": "M4",
+    "title": "GET /articles latency (5 runs)",
+    "status": "INFO",
+    "detail": "ms=572,581,565,570,569"
+  },
+  {
+    "id": "M5",
+    "title": "CORS + security headers",
+    "status": "INFO",
+    "detail": "ACAO=* x-powered-by=Express csp=none xfo=none"
+  },
+  {
+    "id": "M6",
+    "title": "Register page a11y",
+    "status": "BUG",
+    "detail": "{\"inputs\":3,\"unlabeled\":3,\"lang\":\"en\",\"imgsNoAlt\":0}"
+  },
+  {
+    "id": "M7",
+    "title": "Mobile 375px horizontal overflow",
+    "status": "BUG",
+    "detail": "overflow=true"
+  },
+  {
+    "id": "X1",
+    "title": "Browser console errors during run",
+    "status": "INFO",
+    "detail": "Warning: Please use `require(\"history\").createBrowserHistory` instead of `require(\"history/createBrowserHistory\")`. Support for the latter will be removed in the next major release. || Warning: A component is changing an uncontrolled input of type %s to be controlled. Input elements should not switch from uncontrolled to controlled (or vice versa). Decide between using a controlled or uncontrolled input element for the lifetime of the component. More info: https://fb.me/react-controlled-components%s text \n    in input (at Register.js:69)\n    in fieldset (at Register.js:68)\n    in fieldset (at Register.js:66)\n    in form (at Register.js:65)\n    in div (at Register.js:55)\n    in div (at Register.js:53)\n    in div (at Register.js:52)\n    in div (at Register.js:51)\n    in Register (created by "
+  }
+]

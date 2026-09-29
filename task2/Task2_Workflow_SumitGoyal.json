@@ -1,0 +1,526 @@
+{
+  "name": "Task2 - GitHub Trending Morning Brief",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "m0",
+      "name": "Manual Test",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "a1",
+      "name": "Every Hour",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "morning-brief",
+        "options": {}
+      },
+      "id": "a2",
+      "name": "Webhook (manual test)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        200
+      ],
+      "webhookId": "morning-brief"
+    },
+    {
+      "parameters": {
+        "url": "https://api.github.com/search/repositories",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ 'created:>' + $now.minus({ days: 7 }).toFormat('yyyy-MM-dd') }}"
+            },
+            {
+              "name": "sort",
+              "value": "stars"
+            },
+            {
+              "name": "order",
+              "value": "desc"
+            },
+            {
+              "name": "per_page",
+              "value": "20"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "User-Agent",
+              "value": "n8n-morning-brief"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "a3",
+      "name": "GitHub - Search Trending Repos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        100
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GitHubHeaderAut1",
+          "name": "GitHub Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Keep only the top 5 repos by stars and reshape to the fields we need\nconst repos = ($input.first().json.items || [])\n  .sort((a, b) => b.stargazers_count - a.stargazers_count)\n  .slice(0, 5)\n  .map(r => ({\n    full_name: r.full_name,\n    url: r.html_url,\n    stars: r.stargazers_count,\n    language: r.language || 'n/a',\n    description: (r.description || '').slice(0, 120)\n  }));\n\nif (repos.length === 0) {\n  throw new Error('GitHub returned 0 repositories');\n}\n\nreturn [{ json: { repos, top: repos[0] } }];"
+      },
+      "id": "a4",
+      "name": "Top 5 Repos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://api.github.com/repos/' + $json.top.full_name + '/readme' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "User-Agent",
+              "value": "n8n-morning-brief"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "a5",
+      "name": "GitHub - Fetch Top Repo README",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GitHubHeaderAut1",
+          "name": "GitHub Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Enrichment is optional: if README failed we still send the digest\nconst { repos, top } = $('Top 5 Repos').first().json;\nconst readmeJson = $input.first().json;\n\nlet readmeSnippet = 'README unavailable (enrichment call failed - see logs)';\nif (readmeJson && readmeJson.content) {\n  const text = Buffer.from(readmeJson.content, 'base64').toString('utf8');\n  readmeSnippet = text\n    .replace(/<[^>]*>/g, '')      // strip HTML\n    .replace(/!\\[.*?\\]\\(.*?\\)/g, '') // strip images\n    .replace(/\\s+/g, ' ')\n    .trim()\n    .slice(0, 300) + '...';\n}\n\nconst list = repos\n  .map((r, i) => `${i + 1}. **${r.full_name}** - ${r.stars} stars (${r.language})\\n   ${r.url}`)\n  .join('\\n');\n\nreturn [{ json: { top_stars: top.stars, top_name: top.full_name, list, readmeSnippet } }];"
+      },
+      "id": "a6",
+      "name": "Build Digest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.top_stars }}",
+              "rightValue": 1000,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a7",
+      "name": "Top Repo > 1000 Stars?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s1",
+              "name": "content",
+              "value": "={{ ('🔥 **HOT this week** - ' + $json.top_name + ' already has ' + $json.top_stars + ' stars!\\n\\n**Top 5 new repos (last 7 days)**\\n' + $json.list + '\\n\\n**About #1:** ' + $json.readmeSnippet).slice(0, 1990) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a8",
+      "name": "Format HOT Brief",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s2",
+              "name": "content",
+              "value": "={{ ('🌱 **Quiet week** - top new repo ' + $json.top_name + ' has ' + $json.top_stars + ' stars (below 1000 threshold).\\n\\n**Top 5 new repos (last 7 days)**\\n' + $json.list).slice(0, 1990) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a9",
+      "name": "Format Quiet Brief",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1440,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "={{ $json.content }}",
+        "options": {}
+      },
+      "id": "a10",
+      "name": "Discord - Send Brief",
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        100
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "onError": "continueErrorOutput",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "DiscordWebhook01",
+          "name": "Discord Webhook"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalise any error coming from an error output into one alert message\nconst e = $input.first().json;\nconst node = $prevNode.name;\nconst msg = (e.error && (e.error.message || JSON.stringify(e.error))) || JSON.stringify(e).slice(0, 500);\nconsole.log(`[morning-brief] ${node} failed: ${msg}`);\nreturn [{ json: { content: `⚠️ **Morning brief failed** at node *${node}*\\nError: ${msg}\\nTime: ${new Date().toISOString()}` } }];"
+      },
+      "id": "a11",
+      "name": "Build Error Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "={{ $json.content }}",
+        "options": {}
+      },
+      "id": "a12",
+      "name": "Discord - Error Alert",
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        720,
+        300
+      ],
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "DiscordWebhook01",
+          "name": "Discord Webhook"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "a13",
+      "name": "Error Trigger (uncaught failures)",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nreturn [{ json: { content: `🚨 **Workflow crashed**: ${d.workflow?.name}\\nNode: ${d.execution?.lastNodeExecuted}\\nError: ${d.execution?.error?.message}\\nExecution: ${d.execution?.url || d.execution?.id}` } }];"
+      },
+      "id": "a14",
+      "name": "Format Crash Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        460
+      ]
+    }
+  ],
+  "connections": {
+    "Every Hour": {
+      "main": [
+        [
+          {
+            "node": "GitHub - Search Trending Repos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook (manual test)": {
+      "main": [
+        [
+          {
+            "node": "GitHub - Search Trending Repos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GitHub - Search Trending Repos": {
+      "main": [
+        [
+          {
+            "node": "Top 5 Repos",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Top 5 Repos": {
+      "main": [
+        [
+          {
+            "node": "GitHub - Fetch Top Repo README",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GitHub - Fetch Top Repo README": {
+      "main": [
+        [
+          {
+            "node": "Build Digest",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Digest": {
+      "main": [
+        [
+          {
+            "node": "Top Repo > 1000 Stars?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Top Repo > 1000 Stars?": {
+      "main": [
+        [
+          {
+            "node": "Format HOT Brief",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Quiet Brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format HOT Brief": {
+      "main": [
+        [
+          {
+            "node": "Discord - Send Brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Quiet Brief": {
+      "main": [
+        [
+          {
+            "node": "Discord - Send Brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Discord - Send Brief": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Build Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Error Alert": {
+      "main": [
+        [
+          {
+            "node": "Discord - Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger (uncaught failures)": {
+      "main": [
+        [
+          {
+            "node": "Format Crash Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Crash Alert": {
+      "main": [
+        [
+          {
+            "node": "Discord - Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Test": {
+      "main": [
+        [
+          {
+            "node": "GitHub - Search Trending Repos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "Task2MorningBrf1"
+  },
+  "pinData": {},
+  "id": "Task2MorningBrf1",
+  "active": false
+}

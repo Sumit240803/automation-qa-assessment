@@ -6,7 +6,7 @@
 | 2. n8n API integration workflow | `task2/Task2_Workflow_SumitGoyal.json`, `task2/README.md`, `task2/screenshots/` |
 | Bonus. Uptime monitor | `bonus/Bonus_UptimeMonitor_SumitGoyal.json`, `bonus/bonus_canvas.png`, `bonus/bonus_execution_app_up.png` |
 
-**Loom walkthrough:** <link>
+**Walkthrough:** [Click The Link To Watch](qa-assessment-demonstration.mp4)
 
 ## Summary of work (under 1 page)
 **Task 1:** The public RealWorld demo (demo.realworld.io) was down when tested (HTTP 404), so I ran the Conduit app locally. I tested sign-up, login, create, edit, delete and logout, then pushed edge cases: long inputs, special characters, XSS payloads, a throttled network, malformed API input and reuse of a token after logout. Most of this is automated in a Playwright script (`task1/qa-tests/qa.js`, 34 checks, with screenshots), and I confirmed each finding in the source code. I logged 14 issues. The most serious are dead external dependencies (no data and no styling), a session that survives logout, the app crashing on an empty article, and weak auth validation. The root-cause analysis covers the session surviving logout.

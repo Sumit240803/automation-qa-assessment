@@ -15,7 +15,7 @@
     "id": "S3",
     "title": "Invalid email format accepted",
     "status": "BUG",
-    "detail": "HTTP 201 {\"user\":{\"id\":15,\"email\":\"notanemail314772\",\"username\":\"bad_314772\",\"bio\":null,\"image\":\"https://api.realworld.io/images/smiley-cyrus.jpeg\",\"token\":\"ey"
+    "detail": "HTTP 201 {\"user\":{\"id\":20,\"email\":\"notanemail411751\",\"username\":\"bad_411751\",\"bio\":null,\"image\":\"https://api.realworld.io/images/smiley-cyrus.jpeg\",\"token\":\"ey"
   },
   {
     "id": "S4",
@@ -32,8 +32,8 @@
   {
     "id": "S6",
     "title": "Whitespace-only username / 5000-char username",
-    "status": "BUG",
-    "detail": "whitespace HTTP 422, long HTTP 201"
+    "status": "PASS",
+    "detail": "whitespace HTTP 422, long HTTP 422"
   },
   {
     "id": "L1",
@@ -57,13 +57,13 @@
     "id": "L4",
     "title": "JWT lifetime",
     "status": "INFO",
-    "detail": "payload={\"user\":{\"id\":13},\"iat\":1790684321,\"exp\":1795868321} expiresIn(days)=60.0"
+    "detail": "payload={\"user\":{\"id\":18},\"iat\":1790749419,\"exp\":1795933419} expiresIn(days)=60.0"
   },
   {
     "id": "A1",
     "title": "Create article",
     "status": "PASS",
-    "detail": "url=http://localhost:4100/article/QA-article-314772-13"
+    "detail": "url=http://localhost:4100/article/QA-article-411751-18"
   },
   {
     "id": "A2",
@@ -87,7 +87,7 @@
     "id": "A5",
     "title": "Special chars title/slug",
     "status": "INFO",
-    "detail": "HTTP 201 slug=\"Unicode-'-\"-lessbgreaterxlessbgreater-314772-13\" rendered h1=\"Ünïcødé 🚀 ' \" <b>x</b> 314772\""
+    "detail": "HTTP 201 slug=\"Unicode-'-\"-lessbgreaterxlessbgreater-411751-18\" rendered h1=\"Ünïcødé 🚀 ' \" <b>x</b> 411751\""
   },
   {
     "id": "A6",
@@ -105,7 +105,7 @@
     "id": "E1",
     "title": "Edit own article (title change)",
     "status": "INFO",
-    "detail": "new url=http://localhost:4100/article/QA-article-EDITED-314772-13; old slug GET -> HTTP 404"
+    "detail": "new url=http://localhost:4100/article/QA-article-EDITED-411751-18; old slug GET -> HTTP 404"
   },
   {
     "id": "E2",
@@ -117,7 +117,7 @@
     "id": "E2b",
     "title": "Other user can open editor for my article (UI)",
     "status": "BUG",
-    "detail": "title field prefilled=\"QA article EDITED 314772\""
+    "detail": "title field prefilled=\"QA article EDITED 411751\""
   },
   {
     "id": "C1",
@@ -135,7 +135,7 @@
     "id": "D1b",
     "title": "Back button after delete",
     "status": "INFO",
-    "detail": "page shows: \"conduit Home  New Post  Settings qa1_314772\""
+    "detail": "page shows: \"conduit Home  New Post  Settings qa1_411751\""
   },
   {
     "id": "D2",
@@ -147,7 +147,7 @@
     "id": "D3",
     "title": "Unknown article URL",
     "status": "INFO",
-    "detail": "page shows: \"conduit Home  New Post  Settings qa1_314772\""
+    "detail": "page shows: \"conduit Home  New Post  Settings qa1_411751\""
   },
   {
     "id": "O1",
@@ -177,13 +177,13 @@
     "id": "M3",
     "title": "limit=100000&offset=-5",
     "status": "BUG",
-    "detail": "HTTP 500 ms=93 count=undefined"
+    "detail": "HTTP 500 ms=102 count=undefined"
   },
   {
     "id": "M4",
     "title": "GET /articles latency (5 runs)",
     "status": "INFO",
-    "detail": "ms=572,581,565,570,569"
+    "detail": "ms=600,598,593,602,596"
   },
   {
     "id": "M5",
